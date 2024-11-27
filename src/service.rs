@@ -6,7 +6,7 @@ use std::{
     time::Duration,
 };
 
-use crossbeam_channel::{unbounded, Receiver};
+use crossbeam_channel::unbounded;
 use log::{debug, error, info};
 
 use crate::TRASH_PATHS;
@@ -31,7 +31,9 @@ pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandl
     handles.extend((0..num_of_workers).into_iter().enumerate().map(|(id, _)| {
         let rx = rx.clone();
         let handle = thread::spawn(move || {
-            payload(rx);
+            while let Ok(path) = rx.recv() {
+                payload(path);
+            }
         });
 
         info!("Started worker {id}");
@@ -42,18 +44,21 @@ pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandl
     handles
 }
 
-fn payload(rx: Receiver<&PathBuf>) {
-    while let Ok(path) = rx.recv() {
-        debug!("Received path: {}", path.to_string_lossy());
+fn payload(path: &PathBuf) {
+    debug!("Received path: {}", path.to_string_lossy());
 
-        if let Err(e) = if path.is_dir() {
-            remove_dir_all(path)
-        } else {
-            remove_file(path)
-        } {
-            if e.kind() != ErrorKind::NotFound {
-                error!("Failed to remove {}: {e}", path.to_string_lossy());
-            }
+    if path.is_relative() {
+        error!("relative path is not allowed");
+        return;
+    }
+
+    if let Err(e) = if path.is_dir() {
+        remove_dir_all(path)
+    } else {
+        remove_file(path)
+    } {
+        if e.kind() != ErrorKind::NotFound {
+            error!("Failed to remove {}: {e}", path.to_string_lossy());
         }
     }
 }
