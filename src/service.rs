@@ -78,13 +78,13 @@ fn process_glob(glob: impl AsRef<str>, tx: &Sender<PathBuf>) {
             for path in paths.filter_map(|result| match result {
                 Ok(path) => Some(path),
                 Err(e) => {
-                    error!("Failed to read pattern {glob} due to {e}");
+                    error!("Failed to read pattern {glob}: {e}");
                     None
                 }
             }) {
                 let _ = tx.send(path);
             }
         }
-        Err(e) => error!("Invalid glob pattern: {glob}, reason: {e}"),
+        Err(e) => error!("Invalid glob pattern {glob}: {e}"),
     };
 }
