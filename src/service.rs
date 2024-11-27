@@ -1,5 +1,5 @@
 use std::{
-    fs::remove_dir_all,
+    fs::{remove_dir_all, remove_file},
     thread::{self, JoinHandle},
     time::Duration,
 };
@@ -31,7 +31,12 @@ pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandl
         let handle = thread::spawn(move || {
             while let Ok(path) = rx.recv() {
                 debug!("Received path: {}", path.to_string_lossy());
-                if let Err(e) = remove_dir_all(path) {
+
+                if let Err(e) = if path.is_dir() {
+                    remove_dir_all(path)
+                } else {
+                    remove_file(path)
+                } {
                     error!("Failed to remove {}: {e}", path.to_string_lossy());
                 }
             }
