@@ -6,7 +6,7 @@ use std::{
     time::Duration,
 };
 
-use crossbeam_channel::unbounded;
+use crossbeam_channel::{unbounded, Sender};
 use log::{debug, error, info};
 
 use crate::{TRASH_GLOBS, TRASH_PATHS};
@@ -27,20 +27,7 @@ pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandl
         }
 
         for glob in globs {
-            match glob::glob(glob) {
-                Ok(paths) => {
-                    for path in paths.filter_map(|result| match result {
-                        Ok(path) => Some(path),
-                        Err(e) => {
-                            error!("Failed to read pattern {glob} due to {e}");
-                            None
-                        }
-                    }) {
-                        let _ = tx.send(path);
-                    }
-                }
-                Err(e) => error!("Invalid glob pattern: {glob}, reason: {e}"),
-            };
+            process_glob(glob, &tx);
         }
 
         thread::sleep(interval);
@@ -81,4 +68,23 @@ fn remove_path(path: &PathBuf) {
             error!("Failed to remove {}: {e}", path.to_string_lossy());
         }
     }
+}
+
+fn process_glob(glob: impl AsRef<str>, tx: &Sender<PathBuf>) {
+    let glob = glob.as_ref();
+
+    match glob::glob(glob) {
+        Ok(paths) => {
+            for path in paths.filter_map(|result| match result {
+                Ok(path) => Some(path),
+                Err(e) => {
+                    error!("Failed to read pattern {glob} due to {e}");
+                    None
+                }
+            }) {
+                let _ = tx.send(path);
+            }
+        }
+        Err(e) => error!("Invalid glob pattern: {glob}, reason: {e}"),
+    };
 }
