@@ -2,7 +2,7 @@ use std::{
     borrow::Cow,
     error::Error,
     path::{Path, PathBuf},
-    sync::OnceLock,
+    sync::{atomic::AtomicBool, OnceLock},
 };
 
 pub mod config;
@@ -14,3 +14,4 @@ pub type Payload = Cow<'static, Path>;
 
 pub static TRASH_PATHS: OnceLock<Vec<PathBuf>> = OnceLock::new();
 pub static TRASH_GLOBS: OnceLock<Vec<String>> = OnceLock::new();
+pub static ALLOW_RELATIVE: AtomicBool = AtomicBool::new(false);

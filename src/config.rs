@@ -9,6 +9,7 @@ pub struct Config {
     pub globs: Vec<String>,
     pub interval: Duration,
     pub num_of_workers: Option<NonZero<usize>>,
+    pub allow_relative_path: bool,
 }
 
 impl Default for Config {
@@ -18,6 +19,7 @@ impl Default for Config {
             globs: vec![],
             interval: Duration::from_secs(30),
             num_of_workers: None,
+            allow_relative_path: false,
         }
     }
 }
