@@ -17,18 +17,17 @@ fn main() -> Result<()> {
         interval,
         num_of_workers,
     } = config;
+    let num_of_workers = if let Some(num) = num_of_workers {
+        num.into()
+    } else {
+        available_parallelism().map(usize::from).unwrap_or(1)
+    };
 
     info!("Num of workers: {num_of_workers:?}");
     info!("Interval: {}", humantime::format_duration(interval));
     info!("Paths: {paths:?}");
 
     let _ = TRASH_PATHS.set(paths);
-
-    let num_of_workers = if let Some(num) = num_of_workers {
-        num.into()
-    } else {
-        available_parallelism().map(usize::from).unwrap_or(1)
-    };
 
     let handles = spawn_service(num_of_workers, interval);
     for handle in handles {
