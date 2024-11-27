@@ -1,14 +1,12 @@
 use std::{
-    fs::{remove_dir_all, remove_file},
-    io::ErrorKind,
     thread::{self, JoinHandle},
     time::Duration,
 };
 
 use crossbeam_channel::{unbounded, Sender};
-use log::{debug, error, info};
+use log::{error, info};
 
-use crate::{Payload, TRASH_GLOBS, TRASH_PATHS};
+use crate::{utils::remove_path, Payload, TRASH_GLOBS, TRASH_PATHS};
 
 pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandle<()>> {
     let mut handles = Vec::with_capacity(num_of_workers + 1);
@@ -48,25 +46,6 @@ pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandl
     }));
 
     handles
-}
-
-fn remove_path(path: &Payload) {
-    debug!("Received path: {}", path.to_string_lossy());
-
-    if path.is_relative() {
-        error!("relative path is not allowed");
-        return;
-    }
-
-    if let Err(e) = if path.is_dir() {
-        remove_dir_all(path)
-    } else {
-        remove_file(path)
-    } {
-        if e.kind() != ErrorKind::NotFound {
-            error!("Failed to remove {}: {e}", path.to_string_lossy());
-        }
-    }
 }
 
 fn process_glob(glob: impl AsRef<str>, tx: &Sender<Payload>) {
