@@ -9,7 +9,7 @@ use std::{
 use crossbeam_channel::unbounded;
 use log::{debug, error, info};
 
-use crate::TRASH_PATHS;
+use crate::{TRASH_GLOBS, TRASH_PATHS};
 
 pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandle<()>> {
     let mut handles = Vec::with_capacity(num_of_workers + 1);
@@ -18,9 +18,29 @@ pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandl
         let Some(paths) = TRASH_PATHS.get() else {
             continue;
         };
+        let Some(globs) = TRASH_GLOBS.get() else {
+            continue;
+        };
 
         for path in paths {
-            let _ = tx.send(path);
+            let _ = tx.send(path.clone());
+        }
+
+        for glob in globs {
+            match glob::glob(glob) {
+                Ok(paths) => {
+                    for path in paths.filter_map(|result| match result {
+                        Ok(path) => Some(path),
+                        Err(e) => {
+                            error!("Failed to read pattern {glob} due to {e}");
+                            None
+                        }
+                    }) {
+                        let _ = tx.send(path);
+                    }
+                }
+                Err(e) => error!("Invalid glob pattern: {glob}, reason: {e}"),
+            };
         }
 
         thread::sleep(interval);
@@ -32,7 +52,7 @@ pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandl
         let rx = rx.clone();
         let handle = thread::spawn(move || {
             while let Ok(path) = rx.recv() {
-                payload(path);
+                remove_path(&path);
             }
         });
 
@@ -44,7 +64,7 @@ pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandl
     handles
 }
 
-fn payload(path: &PathBuf) {
+fn remove_path(path: &PathBuf) {
     debug!("Received path: {}", path.to_string_lossy());
 
     if path.is_relative() {

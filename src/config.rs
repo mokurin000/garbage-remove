@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct Config {
     pub paths: Vec<PathBuf>,
+    pub globs: Vec<String>,
     pub interval: Duration,
     pub num_of_workers: Option<NonZero<usize>>,
 }
@@ -14,6 +15,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             paths: vec![],
+            globs: vec![],
             interval: Duration::from_secs(30),
             num_of_workers: None,
         }
