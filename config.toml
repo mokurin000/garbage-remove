@@ -1,5 +1,0 @@
-paths = []
-
-[interval]
-secs = 30
-nanos = 0
