@@ -1,7 +1,6 @@
 use std::{
     fs::{remove_dir_all, remove_file},
     io::ErrorKind,
-    path::PathBuf,
     thread::{self, JoinHandle},
     time::Duration,
 };
@@ -9,7 +8,7 @@ use std::{
 use crossbeam_channel::{unbounded, Sender};
 use log::{debug, error, info};
 
-use crate::{TRASH_GLOBS, TRASH_PATHS};
+use crate::{Payload, TRASH_GLOBS, TRASH_PATHS};
 
 pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandle<()>> {
     let mut handles = Vec::with_capacity(num_of_workers + 1);
@@ -23,7 +22,7 @@ pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandl
         };
 
         for path in paths {
-            let _ = tx.send(path.clone());
+            let _ = tx.send(Payload::from(path));
         }
 
         for glob in globs {
@@ -51,7 +50,7 @@ pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandl
     handles
 }
 
-fn remove_path(path: &PathBuf) {
+fn remove_path(path: &Payload) {
     debug!("Received path: {}", path.to_string_lossy());
 
     if path.is_relative() {
@@ -70,7 +69,7 @@ fn remove_path(path: &PathBuf) {
     }
 }
 
-fn process_glob(glob: impl AsRef<str>, tx: &Sender<PathBuf>) {
+fn process_glob(glob: impl AsRef<str>, tx: &Sender<Payload>) {
     let glob = glob.as_ref();
 
     match glob::glob(glob) {
@@ -82,7 +81,7 @@ fn process_glob(glob: impl AsRef<str>, tx: &Sender<PathBuf>) {
                     None
                 }
             }) {
-                let _ = tx.send(path);
+                let _ = tx.send(Payload::from(path));
             }
         }
         Err(e) => error!("Invalid glob pattern {glob}: {e}"),
