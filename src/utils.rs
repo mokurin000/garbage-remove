@@ -4,7 +4,7 @@ use std::{
     sync::atomic::Ordering,
 };
 
-use log::{debug, error};
+use log::{debug, error, info};
 
 use crate::{Payload, ALLOW_RELATIVE};
 
@@ -17,13 +17,18 @@ pub fn remove_path(path: &Payload) {
         return;
     }
 
-    if let Err(e) = if path.is_dir() {
+    match if path.is_dir() {
         remove_dir_all(path)
     } else {
         remove_file(path)
     } {
-        if e.kind() != ErrorKind::NotFound {
-            error!("Failed to remove {}: {e}", path.to_string_lossy());
+        Ok(_) => {
+            info!("Removed {}", path.to_string_lossy())
+        }
+        Err(e) => {
+            if e.kind() != ErrorKind::NotFound {
+                error!("Failed to remove {}: {e}", path.to_string_lossy());
+            }
         }
     }
 }
