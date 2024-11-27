@@ -10,11 +10,13 @@ fn main() -> Result<()> {
     pretty_env_logger::init_timed();
 
     let config_raw = fs::read_to_string("config.toml").unwrap_or(String::new());
+    let config = toml::from_str(&config_raw)?;
+    fs::write("config.toml", toml::to_string_pretty(&config)?)?;
     let Config {
         paths,
         interval,
         num_of_workers,
-    } = toml::from_str(&config_raw)?;
+    } = config;
 
     info!("Num of workers: {num_of_workers:?}");
     info!("Interval: {}", humantime::format_duration(interval));
