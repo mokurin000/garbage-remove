@@ -2,7 +2,7 @@ use std::{num::NonZero, path::PathBuf, time::Duration};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(default)]
 pub struct Config {
     pub paths: Vec<PathBuf>,

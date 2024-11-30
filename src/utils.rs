@@ -6,12 +6,12 @@ use std::{
 
 use log::{debug, error, info};
 
-use crate::{Payload, ALLOW_RELATIVE};
+use crate::{config::Config, Payload, Result, ALLOW_RELATIVE};
 
 pub fn remove_path(path: &Payload) {
     debug!("Received path: {}", path.to_string_lossy());
 
-    let allow_relative_path = ALLOW_RELATIVE.load(Ordering::Relaxed);
+    let allow_relative_path = ALLOW_RELATIVE.load(Ordering::Acquire);
     if !allow_relative_path && path.is_relative() {
         error!("relative path is not allowed");
         return;
@@ -31,4 +31,11 @@ pub fn remove_path(path: &Payload) {
             }
         }
     }
+}
+
+pub fn read_config() -> Result<Config> {
+    let config_raw = std::fs::read_to_string("config.toml").unwrap_or(String::new());
+    let config = toml::from_str(&config_raw)?;
+    std::fs::write("config.toml", toml::to_string_pretty(&config)?)?;
+    Ok(config)
 }

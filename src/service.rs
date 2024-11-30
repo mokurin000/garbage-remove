@@ -1,33 +1,63 @@
-use std::{
-    thread::{self, JoinHandle},
-    time::Duration,
-};
+use std::thread::{self, JoinHandle};
 
 use crossbeam_channel::{unbounded, Sender};
 use log::{error, info};
 
-use crate::{utils::remove_path, Payload, TRASH_GLOBS, TRASH_PATHS};
+use crate::{
+    config::Config,
+    utils::{read_config, remove_path},
+    Payload,
+};
 
-pub fn spawn_service(num_of_workers: usize, interval: Duration) -> Vec<JoinHandle<()>> {
+pub fn spawn_service(num_of_workers: usize, context: Config) -> Vec<JoinHandle<()>> {
+    let Config {
+        paths,
+        globs,
+        interval,
+        ..
+    } = context;
     let mut handles = Vec::with_capacity(num_of_workers + 1);
     let (tx, rx) = unbounded();
-    let handle = thread::spawn(move || loop {
-        let Some(paths) = TRASH_PATHS.get() else {
-            continue;
-        };
-        let Some(globs) = TRASH_GLOBS.get() else {
-            continue;
-        };
+    let handle = thread::spawn(move || {
+        let mut cur_interval = interval;
+        let mut cur_paths = paths;
+        let mut cur_globs = globs;
+        loop {
+            match read_config() {
+                Ok(Config {
+                    paths,
+                    globs,
+                    interval,
+                    ..
+                }) => {
+                    if paths != cur_paths {
+                        info!("New paths: {paths:?}");
+                        cur_paths = paths;
+                    }
+                    if globs != cur_globs {
+                        info!("New globs: {globs:?}");
+                        cur_globs = globs;
+                    }
+                    if interval != cur_interval {
+                        info!("New interval: {}", humantime::format_duration(interval));
+                        cur_interval = interval;
+                    }
+                }
+                Err(e) => {
+                    error!("Failed to read new config: {e}");
+                }
+            }
 
-        for path in paths {
-            let _ = tx.send(Payload::from(path));
+            for path in cur_paths.iter() {
+                let _ = tx.send(Payload::from(path.clone()));
+            }
+
+            for glob in cur_globs.iter() {
+                process_glob(glob, &tx);
+            }
+
+            thread::sleep(cur_interval);
         }
-
-        for glob in globs {
-            process_glob(glob, &tx);
-        }
-
-        thread::sleep(interval);
     });
     info!("Started producer thread");
     handles.push(handle);
