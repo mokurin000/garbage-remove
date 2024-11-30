@@ -1,4 +1,7 @@
-use std::thread::{self, JoinHandle};
+use std::{
+    sync::atomic::Ordering,
+    thread::{self, JoinHandle},
+};
 
 use crossbeam_channel::{unbounded, Sender};
 use log::{error, info};
@@ -6,7 +9,7 @@ use log::{error, info};
 use crate::{
     config::Config,
     utils::{read_config, remove_path},
-    Payload,
+    Payload, ALLOW_RELATIVE,
 };
 
 pub fn spawn_service(num_of_workers: usize, context: Config) -> Vec<JoinHandle<()>> {
@@ -14,8 +17,10 @@ pub fn spawn_service(num_of_workers: usize, context: Config) -> Vec<JoinHandle<(
         paths,
         globs,
         interval,
+        allow_relative_path,
         ..
     } = context;
+    ALLOW_RELATIVE.store(allow_relative_path, Ordering::Release);
     let mut handles = Vec::with_capacity(num_of_workers + 1);
     let (tx, rx) = unbounded();
     let handle = thread::spawn(move || {
@@ -28,6 +33,7 @@ pub fn spawn_service(num_of_workers: usize, context: Config) -> Vec<JoinHandle<(
                     paths,
                     globs,
                     interval,
+                    allow_relative_path,
                     ..
                 }) => {
                     if paths != cur_paths {
@@ -42,6 +48,7 @@ pub fn spawn_service(num_of_workers: usize, context: Config) -> Vec<JoinHandle<(
                         info!("New interval: {}", humantime::format_duration(interval));
                         cur_interval = interval;
                     }
+                    ALLOW_RELATIVE.store(allow_relative_path, Ordering::Release)
                 }
                 Err(e) => {
                     error!("Failed to read new config: {e}");
