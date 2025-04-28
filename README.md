@@ -1,8 +1,8 @@
 # Garbage-Remove
 
-Auto clean tracker files and garbage files.
+INotify based high performance garbage cleaning solution for Android.
 
-Thread-based, portablity-oriented.
+> Note: this will remove any matched file immediately, don't use it to clean caches.
 
 ## Example Configuration
 
@@ -14,9 +14,5 @@ paths = [
 globs = [
     "/storage/emulated/0/*/.thumbnails/.database_uuid",
 ]
-allow_relative_path = false
 
-[interval]
-secs = 30
-nanos = 0
 ```
