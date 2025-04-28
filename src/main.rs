@@ -29,25 +29,23 @@ async fn main() -> Result<()> {
     let mut watcher = notify::recommended_watcher(listener)?;
     watcher.watch(&watch_path, notify::RecursiveMode::Recursive)?;
 
-    tokio::spawn(async move {
-        let rx = rx.as_async();
-        while let Ok(path) = rx.recv().await {
-            let remove = if path.is_dir() {
-                tokio::fs::remove_dir_all(&path).await
-            } else {
-                tokio::fs::remove_file(&path).await
-            };
+    let rx = rx.as_async();
+    while let Ok(path) = rx.recv().await {
+        let remove = if path.is_dir() {
+            tokio::fs::remove_dir_all(&path).await
+        } else {
+            tokio::fs::remove_file(&path).await
+        };
 
-            if let Err(e) = remove {
-                match e.kind() {
-                    std::io::ErrorKind::NotFound => (),
-                    _ => {
-                        error!("failed to remove {}: {e}", path.to_string_lossy())
-                    }
+        if let Err(e) = remove {
+            match e.kind() {
+                std::io::ErrorKind::NotFound => (),
+                _ => {
+                    error!("failed to remove {}: {e}", path.to_string_lossy())
                 }
             }
         }
-    });
+    }
 
     Ok(())
 }
