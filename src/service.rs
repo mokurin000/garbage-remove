@@ -1,9 +1,9 @@
 use std::{
     sync::atomic::Ordering,
-    thread::{self, JoinHandle},
+    thread::{self, spawn, JoinHandle},
 };
 
-use crossbeam_channel::{unbounded, Sender};
+use kanal::{unbounded, Sender};
 use log::{error, info};
 
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
     Payload, ALLOW_RELATIVE,
 };
 
-pub fn spawn_service(num_of_workers: usize, context: Config) -> Vec<JoinHandle<()>> {
+pub fn spawn_service(context: Config) -> Vec<JoinHandle<()>> {
     let Config {
         paths,
         globs,
@@ -21,7 +21,8 @@ pub fn spawn_service(num_of_workers: usize, context: Config) -> Vec<JoinHandle<(
         ..
     } = context;
     ALLOW_RELATIVE.store(allow_relative_path, Ordering::Release);
-    let mut handles = Vec::with_capacity(num_of_workers + 1);
+    let mut handles = Vec::with_capacity(2);
+
     let (tx, rx) = unbounded();
     let handle = thread::spawn(move || {
         let mut cur_interval = interval;
@@ -68,18 +69,10 @@ pub fn spawn_service(num_of_workers: usize, context: Config) -> Vec<JoinHandle<(
     });
     info!("Started producer thread");
     handles.push(handle);
-
-    handles.extend((0..num_of_workers).into_iter().enumerate().map(|(id, _)| {
-        let rx = rx.clone();
-        let handle = thread::spawn(move || {
-            while let Ok(path) = rx.recv() {
-                remove_path(&path);
-            }
-        });
-
-        info!("Started worker {id}");
-
-        handle
+    handles.push(spawn(move || {
+        while let Ok(path) = rx.recv() {
+            remove_path(&path);
+        }
     }));
 
     handles

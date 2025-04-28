@@ -1,9 +1,4 @@
-use std::{
-    borrow::Cow,
-    error::Error,
-    path::Path,
-    sync::atomic::AtomicBool,
-};
+use std::{borrow::Cow, error::Error, path::Path, sync::atomic::AtomicBool};
 
 pub mod config;
 pub mod service;
