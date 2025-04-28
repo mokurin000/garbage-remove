@@ -37,7 +37,8 @@ async fn main() -> Result<()> {
     }
     for glob in globs.clone() {
         let paths: Vec<PathBuf> =
-            spawn_blocking(move || glob::glob(&glob).unwrap().flatten().collect()).await?;
+            spawn_blocking(move || glob::glob(&glob).into_iter().flatten().flatten().collect())
+                .await?;
         for path in paths {
             remove_path(path).await;
         }
