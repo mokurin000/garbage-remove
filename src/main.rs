@@ -45,13 +45,15 @@ async fn main() -> Result<()> {
             tokio::fs::remove_file(&path).await
         };
 
-        if let Err(e) = remove {
-            match e.kind() {
-                std::io::ErrorKind::NotFound => (),
-                _ => {
-                    error!("failed to remove {}: {e}", path.to_string_lossy())
-                }
+        let path = path.to_string_lossy();
+        match remove {
+            Ok(_) => {
+                info!("removed: {path}");
             }
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                error!("failed to remove {path}: {e}",)
+            }
+            _ => {}
         }
     }
 
