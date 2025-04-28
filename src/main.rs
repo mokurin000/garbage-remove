@@ -1,21 +1,53 @@
-use garbage_remove::{service::spawn_service, utils::read_config, Result};
+use garbage_remove::{config::Config, utils::read_config, watcher::Listener, Result};
 use log::{error, info};
+use notify::Watcher;
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     pretty_env_logger::init_timed();
 
-    let config = match read_config() {
-        Ok(c) => c,
-        Err(e) => {
-            error!("Failed to read initial config: {e}");
-            Err(e)?
-        }
-    };
-    info!("Initial config: {config:?}");
+    let Config {
+        paths,
+        globs,
+        watch_path,
+    } = read_config().inspect_err(|e| error!("Failed to read initial config: {e}"))?;
+    info!("paths: {paths:?}");
+    info!("globs: {globs:?}");
 
-    let handles = spawn_service(config);
-    for handle in handles {
-        handle.join().expect("failed to join thread");
+    if watch_path.is_relative() {
+        error!("relative watch path is not allowed!");
+        return Ok(());
     }
+
+    let (tx, rx) = kanal::unbounded();
+
+    let listener = Listener {
+        tx,
+        paths: paths.into_iter().collect(),
+        globs,
+    };
+    let mut watcher = notify::recommended_watcher(listener)?;
+    watcher.watch(&watch_path, notify::RecursiveMode::Recursive)?;
+
+    tokio::spawn(async move {
+        let rx = rx.as_async();
+        while let Ok(path) = rx.recv().await {
+            let remove = if path.is_dir() {
+                tokio::fs::remove_dir_all(&path).await
+            } else {
+                tokio::fs::remove_file(&path).await
+            };
+
+            if let Err(e) = remove {
+                match e.kind() {
+                    std::io::ErrorKind::NotFound => (),
+                    _ => {
+                        error!("failed to remove {}: {e}", path.to_string_lossy())
+                    }
+                }
+            }
+        }
+    });
+
     Ok(())
 }

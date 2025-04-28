@@ -1,4 +1,4 @@
-use std::{num::NonZero, path::PathBuf, time::Duration};
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
@@ -7,9 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub paths: Vec<PathBuf>,
     pub globs: Vec<String>,
-    pub interval: Duration,
-    pub num_of_workers: Option<NonZero<usize>>,
-    pub allow_relative_path: bool,
+    pub watch_path: PathBuf,
 }
 
 impl Default for Config {
@@ -17,9 +15,7 @@ impl Default for Config {
         Self {
             paths: vec![],
             globs: vec![],
-            interval: Duration::from_secs(30),
-            num_of_workers: None,
-            allow_relative_path: false,
+            watch_path: PathBuf::from("/sdcard"),
         }
     }
 }

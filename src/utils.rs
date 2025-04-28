@@ -1,19 +1,19 @@
 use std::{
     fs::{remove_dir_all, remove_file},
     io::ErrorKind,
-    sync::atomic::Ordering,
+    path::Path,
 };
 
 use log::{debug, error, info};
 
-use crate::{config::Config, Payload, Result, ALLOW_RELATIVE};
+use crate::{config::Config, Result};
 
-pub fn remove_path(path: &Payload) {
+pub fn remove_path(path: impl AsRef<Path>) {
+    let path = path.as_ref();
     debug!("Received path: {}", path.to_string_lossy());
 
-    let allow_relative_path = ALLOW_RELATIVE.load(Ordering::Acquire);
-    if !allow_relative_path && path.is_relative() {
-        error!("relative path is not allowed");
+    if path.is_relative() {
+        error!("relative path is not allowed: {}", path.to_string_lossy());
         return;
     }
 
