@@ -1,10 +1,18 @@
 use garbage_remove::{config::Config, utils::read_config, watcher::Listener, Result};
-use log::{error, info};
 use notify::Watcher;
+use tracing::level_filters::LevelFilter;
+use tracing::{error, info};
+use tracing_subscriber::EnvFilter;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    pretty_env_logger::init_timed();
+    tracing_subscriber::FmtSubscriber::builder()
+        .with_env_filter(
+            EnvFilter::builder()
+                .with_default_directive(LevelFilter::INFO.into())
+                .from_env_lossy(),
+        )
+        .init();
 
     let Config {
         paths,

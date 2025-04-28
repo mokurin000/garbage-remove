@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use ahash::AHashSet;
 use glob_match::glob_match;
 use kanal::Sender;
-use log::debug;
 use notify::EventHandler;
+use tracing::debug;
 
 pub struct Listener {
     pub tx: Sender<PathBuf>,
