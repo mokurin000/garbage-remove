@@ -15,7 +15,7 @@ impl Default for Config {
         Self {
             paths: vec![],
             globs: vec![],
-            watch_path: PathBuf::from("/sdcard"),
+            watch_path: PathBuf::from("/storage/emulated/0"),
         }
     }
 }
