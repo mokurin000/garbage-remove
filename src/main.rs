@@ -1,5 +1,9 @@
+use std::path::PathBuf;
+
+use garbage_remove::utils::remove_path;
 use garbage_remove::{config::Config, utils::read_config, watcher::Listener, Result};
 use notify::Watcher;
+use tokio::task::spawn_blocking;
 use tracing::level_filters::LevelFilter;
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
@@ -27,6 +31,20 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
+    info!("start-up clean-up...");
+    for path in &paths {
+        remove_path(path).await;
+    }
+    for glob in globs.clone() {
+        let paths: Vec<PathBuf> =
+            spawn_blocking(move || glob::glob(&glob).unwrap().flatten().collect()).await?;
+        for path in paths {
+            remove_path(path).await;
+        }
+    }
+
+    info!("starting fs watcher...");
+
     let (tx, rx) = kanal::unbounded();
 
     let listener = Listener {
@@ -39,22 +57,7 @@ async fn main() -> Result<()> {
 
     let rx = rx.as_async();
     while let Ok(path) = rx.recv().await {
-        let remove = if path.is_dir() {
-            tokio::fs::remove_dir_all(&path).await
-        } else {
-            tokio::fs::remove_file(&path).await
-        };
-
-        let path = path.to_string_lossy();
-        match remove {
-            Ok(_) => {
-                info!("removed: {path}");
-            }
-            Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
-                error!("failed to remove {path}: {e}",)
-            }
-            _ => {}
-        }
+        remove_path(path).await;
     }
 
     Ok(())
