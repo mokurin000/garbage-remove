@@ -1197,8 +1197,7 @@ dependencies = [
 [[package]]
 name = "spdlog-internal"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15bf745ed831fe29ec1ff6cc8dfb443721c08e895c9a08fcaa1e2c6f09ec020d"
+source = "git+https://github.com/SpriteOvO/spdlog-rs?branch=android-support#a1bf05230dcf23626bfe106d687b128ac8c6bd06"
 dependencies = [
  "nom",
  "strum",
@@ -1209,8 +1208,7 @@ dependencies = [
 [[package]]
 name = "spdlog-macros"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ef71587528c04b22410623a92460fbd48f346052d6db3936b636edb4bd9d707"
+source = "git+https://github.com/SpriteOvO/spdlog-rs?branch=android-support#a1bf05230dcf23626bfe106d687b128ac8c6bd06"
 dependencies = [
  "nom",
  "proc-macro2",
@@ -1222,8 +1220,7 @@ dependencies = [
 [[package]]
 name = "spdlog-rs"
 version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e7c7550178278306fb1f9d8213882ba460945c18a4fafcbb043d719d73f6d6e"
+source = "git+https://github.com/SpriteOvO/spdlog-rs?branch=android-support#a1bf05230dcf23626bfe106d687b128ac8c6bd06"
 dependencies = [
  "arc-swap",
  "atomic",
