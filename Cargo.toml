@@ -4,17 +4,16 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ahash = "0.8.11"
+ahash = "0.8.12"
+compio = { version = "0.14.0", default-features = false, features = ["runtime", "io-uring", "macros"] }
 glob = "0.3.2"
 glob-match = "0.2.1"
 kanal = "0.1.1"
 notify = "8.0.0"
 pretty_env_logger = "0.5.0"
 serde = { version = "1.0.219", features = ["serde_derive"] }
-tokio = { version = "1.44.2", default-features = false, features = ["rt-multi-thread", "fs", "macros"] }
-toml = "0.8.21"
-tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+spdlog-rs = { version = "0.4.2", features = ["level-info"] }
+toml = "0.8.22"
 
 [profile.release]
 lto = true

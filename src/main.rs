@@ -1,23 +1,13 @@
 use std::path::PathBuf;
 
+use compio::runtime::spawn_blocking;
 use garbage_remove::utils::remove_path;
 use garbage_remove::{config::Config, utils::read_config, watcher::Listener, Result};
 use notify::Watcher;
-use tokio::task::spawn_blocking;
-use tracing::level_filters::LevelFilter;
-use tracing::{error, info};
-use tracing_subscriber::EnvFilter;
+use spdlog::{error, info};
 
-#[tokio::main]
+#[compio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::FmtSubscriber::builder()
-        .with_env_filter(
-            EnvFilter::builder()
-                .with_default_directive(LevelFilter::INFO.into())
-                .from_env_lossy(),
-        )
-        .init();
-
     let Config {
         paths,
         globs,
@@ -33,14 +23,15 @@ async fn main() -> Result<()> {
 
     info!("start-up clean-up...");
     for path in &paths {
-        remove_path(path).await;
+        _ = remove_path(path).await;
     }
     for glob in globs.clone() {
         let paths: Vec<PathBuf> =
             spawn_blocking(move || glob::glob(&glob).into_iter().flatten().flatten().collect())
-                .await?;
+                .await
+                .map_err(|_| "failed to join")?;
         for path in paths {
-            remove_path(path).await;
+            _ = remove_path(path).await;
         }
     }
 
@@ -58,7 +49,7 @@ async fn main() -> Result<()> {
 
     let rx = rx.as_async();
     while let Ok(path) = rx.recv().await {
-        remove_path(path).await;
+        _ = remove_path(path).await;
     }
 
     Ok(())
