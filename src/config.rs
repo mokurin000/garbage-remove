@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub paths: Vec<PathBuf>,
     pub globs: Vec<String>,
-    pub watch_path: PathBuf,
+    pub watch_path: Option<PathBuf>,
 }
 
 impl Default for Config {
@@ -15,7 +15,7 @@ impl Default for Config {
         Self {
             paths: vec![],
             globs: vec![],
-            watch_path: PathBuf::from("/storage/emulated/0"),
+            watch_path: Some(PathBuf::from("/storage/emulated/0")),
         }
     }
 }

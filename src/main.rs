@@ -1,9 +1,9 @@
-use std::path::PathBuf;
+use std::time::Duration;
 
-use compio::runtime::spawn_blocking;
-use garbage_remove::utils::remove_path;
-use garbage_remove::{config::Config, utils::read_config, watcher::Listener, Result};
-use notify::Watcher;
+use compio::time::sleep;
+use garbage_remove::utils::clean_up_once;
+use garbage_remove::watcher::fs_watching;
+use garbage_remove::{config::Config, utils::read_config, Result};
 use spdlog::{error, info};
 
 #[compio::main]
@@ -16,41 +16,20 @@ async fn main() -> Result<()> {
     info!("paths: {paths:?}");
     info!("globs: {globs:?}");
 
-    if watch_path.is_relative() {
-        error!("relative watch path is not allowed!");
-        return Ok(());
-    }
-
-    info!("start-up clean-up...");
-    for path in &paths {
-        _ = remove_path(path).await;
-    }
-    for glob in globs.clone() {
-        let paths: Vec<PathBuf> =
-            spawn_blocking(move || glob::glob(&glob).into_iter().flatten().flatten().collect())
-                .await
-                .map_err(|_| "failed to join")?;
-        for path in paths {
-            _ = remove_path(path).await;
+    match watch_path {
+        Some(watch_path) => {
+            if watch_path.is_relative() {
+                error!("relative watch path is not allowed!");
+                return Ok(());
+            }
+            info!("start-up clean-up...");
+            clean_up_once(&paths, &globs).await?;
+            info!("starting fs watcher...");
+            fs_watching(watch_path, paths, globs).await
         }
-    }
-
-    info!("starting fs watcher...");
-
-    let (tx, rx) = kanal::unbounded();
-
-    let listener = Listener {
-        tx,
-        paths: paths.into_iter().collect(),
-        globs,
-    };
-    let mut watcher = notify::recommended_watcher(listener)?;
-    watcher.watch(&watch_path, notify::RecursiveMode::Recursive)?;
-
-    let rx = rx.as_async();
-    loop {
-        while let Ok(path) = rx.recv().await {
-            _ = remove_path(path).await;
-        }
+        None => loop {
+            clean_up_once(&paths, &globs).await?;
+            sleep(Duration::from_secs(30)).await;
+        },
     }
 }

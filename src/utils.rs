@@ -1,8 +1,30 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+use compio::runtime::spawn_blocking;
 use spdlog::{error, info};
 
 use crate::{config::Config, Result};
+
+pub async fn clean_up_once(
+    paths: impl IntoIterator<Item = impl AsRef<Path>>,
+    globs: impl IntoIterator<Item = &String>,
+) -> Result<()> {
+    for path in paths {
+        _ = remove_path(path).await;
+    }
+
+    for glob in globs.into_iter().cloned() {
+        let paths: Vec<PathBuf> =
+            spawn_blocking(move || glob::glob(&glob).into_iter().flatten().flatten().collect())
+                .await
+                .map_err(|_| "failed to join")?;
+        for path in paths {
+            _ = remove_path(path).await;
+        }
+    }
+
+    Ok(())
+}
 
 pub fn read_config() -> Result<Config> {
     let config_raw = std::fs::read_to_string("config.toml").unwrap_or_default();
