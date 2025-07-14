@@ -48,9 +48,9 @@ async fn main() -> Result<()> {
     watcher.watch(&watch_path, notify::RecursiveMode::Recursive)?;
 
     let rx = rx.as_async();
-    while let Ok(path) = rx.recv().await {
-        _ = remove_path(path).await;
+    loop {
+        while let Ok(path) = rx.recv().await {
+            _ = remove_path(path).await;
+        }
     }
-
-    Ok(())
 }
